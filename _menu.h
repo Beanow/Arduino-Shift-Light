@@ -41,14 +41,14 @@
 /* ==  Home == */
 class HomeMenuItem : public MenuItem {
   
-  bool showRPM, powerOff;
+  bool showRPM, autoOff, manualOff;
   uint32_t zeroStart;
   
   void onEnter(){
     zeroStart = 0;
     showRPM = true;
-    powerOff = rpm->getRPM() == 0;
-    display->setBrightness(powerOff ? DISPLAY_OFF_BRIGHTNESS : CONFIG->DisplayBrightness);
+    autoOff = rpm->getRPM() == 0;
+    display->setBrightness(autoOff ? DISPLAY_OFF_BRIGHTNESS : CONFIG->DisplayBrightness);
     animator->setBrightness(CONFIG->PixelBrightness);
     animator->showBlockingRunlight(CRGB::Green);
   }
@@ -60,32 +60,36 @@ class HomeMenuItem : public MenuItem {
     
     //Track zero, to switch off.
     if(m_rpm == 0){
-      if(!powerOff){
+      if(!autoOff){
         //If we were not at 0 before.
         if(!zeroStart){
           zeroStart = millis();
         }
         //Check if we timed out yet.
         else if(millis() - zeroStart >= POWER_OFF_TIMEOUT) {
-          powerOff = true;
+          autoOff = true;
           zeroStart = 0;
-          animator->showBlockingRunlight(CRGB::Red);
-          display->setBrightness(DISPLAY_OFF_BRIGHTNESS);
+          if(!manualOff){
+            animator->showBlockingRunlight(CRGB::Red);
+            display->setBrightness(DISPLAY_OFF_BRIGHTNESS);
+          }
         }
       }
     } else {
       //Reset the counter, since we're not at zero.
       zeroStart = 0;
-      if(powerOff){
-        powerOff = false;
-        display->setColon(false);
-        animator->showBlockingRunlight(CRGB::Green);
-        display->setBrightness(CONFIG->DisplayBrightness);
+      if(autoOff){
+        autoOff = false;
+        if(!manualOff){
+          display->setColon(false);
+          animator->showBlockingRunlight(CRGB::Green);
+          display->setBrightness(CONFIG->DisplayBrightness);
+        }
       }
     }
     
     //Either show the clock or RPM on the display.
-    if(showRPM && !powerOff){
+    if(showRPM && !(autoOff || manualOff)){
       
       //Floor it to our step value.
       if(CONFIG->RPMStep > 1){
@@ -104,7 +108,7 @@ class HomeMenuItem : public MenuItem {
       
     }
     
-    if(powerOff){
+    if(autoOff || manualOff){
       delay(ADDITIONAL_INTERVAL);
     }else{
       //RPM as displayed by the RGB pixels.
@@ -114,7 +118,25 @@ class HomeMenuItem : public MenuItem {
     
   }
   
-  void onButtonEvent(buttonSetEvent_t event){ switch (event) {
+  void onButtonEvent(buttonSetEvent_t event){
+    if(manualOff && event != HoldUp){
+      manualOff = false;
+      display->setColon(false);
+      animator->showBlockingRunlight(CRGB::Green);
+      if(!autoOff){
+        display->setBrightness(CONFIG->DisplayBrightness);
+      }
+      return;
+    }
+    switch (event) {
+    
+    case HoldUp:
+      if(!manualOff){
+        manualOff = true;
+        animator->showBlockingRunlight(CRGB::Red);
+        display->setBrightness(DISPLAY_OFF_BRIGHTNESS);
+      }
+      break;
     
     case Up:
       MenuItem::enter(_QuickBrightness_);
