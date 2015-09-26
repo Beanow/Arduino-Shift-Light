@@ -6,6 +6,7 @@
 #define MenuItem_h
 
 #include <Arduino.h>
+#include <DS1302.h>
 #include "PixelAnimator.h"
 #include "RPMMeasure.h"
 #include "ButtonSet.h"
@@ -23,6 +24,7 @@ class MenuItem {
     static void setButtonSet(ButtonSet* buttons);
     static void setDisplay(TM1637Display* display);
     static void setAnimator(PixelAnimator* animator);
+    static void setRTCClock(DS1302* rtcClock);
     static void enter(MenuItem* item);
     static void enter(uint8_t itemIndex);
     static void mainMenuNext(uint8_t currentIndex);
@@ -41,6 +43,7 @@ class MenuItem {
     static TM1637Display* display;
     static PixelAnimator* animator;
     static MenuItem* activeMenuItem;
+    static DS1302* rtcClock;
   
 };
 

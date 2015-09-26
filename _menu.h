@@ -4,6 +4,7 @@
 
 #include "MenuItem.h"
 #include <FastLED.h>
+// #include <DS1302.h>
 #include "_defines.h"
 #include "_menuHelpers.h"
 
@@ -21,10 +22,11 @@
 #define _EditColors_ 16
 #define _EditLCDBrightness_ 17
 #define _EditRPMStep_ 18
-#define _EditPPR_ 19
-#define _EditRPMBuffer_ 20
-#define _EditRPMMeasureMode_ 21
-#define _Reset_ 22
+#define _EditTime_ 19
+#define _EditPPR_ 20
+#define _EditRPMBuffer_ 21
+#define _EditRPMMeasureMode_ 22
+#define _Reset_ 23
 #define LAST_MAIN_MENU_ITEM _Reset_ //Constraint the main menu.
 
 #define _EditColorLow_ 30
@@ -96,9 +98,9 @@ class HomeMenuItem : public MenuItem {
     else {
       
       //Clock on the LCD display.
-      //TODO: run a real clock.
-      display->setColon(millis() / 1000 % 2);
-      display->showNumberDec(1234);
+      Time t = rtcClock->time();
+      display->setColon(t.sec % 2);
+      display->showNumberDec(t.hr*100+t.min);
       
     }
     
@@ -991,6 +993,211 @@ class ResetMenuItem : public MenuItem {
       break;
     
   }}
+  
+};
+
+/* ==  EditTime == */
+class EditTimeMenuItem : public MenuItem {
+  
+  enum editWhat : uint8_t
+  {
+    NOTHING = 0,
+    YEAR = 1,
+    MONTH = 2,
+    DAY = 3,
+    HOUR = 4,
+    MINUTE = 5,
+    SET = 6
+  };
+  
+  uint8_t displaySegments[4] = {
+    SEGMENT_BLANK,
+    SEGMENT_BLANK,
+    SEGMENT_t,
+    SEGMENT_i
+  };
+  
+  uint16_t editValue;
+  uint8_t desiredOutput[4];
+  uint8_t editState;
+  uint8_t prevState;
+  Time newTime = Time(0, 0, 0, 0, 0, 0, Time::kSunday);
+  
+  void onEnter(){
+    desiredOutput[0] = displaySegments[0];
+    desiredOutput[1] = displaySegments[1];
+    desiredOutput[2] = displaySegments[2];
+    desiredOutput[3] = displaySegments[3];
+    editState = (uint8_t)NOTHING;
+    prevState = (uint8_t)NOTHING;
+    editValue = 0;
+    newTime = rtcClock->time();
+    newTime.sec = 0;
+  }
+  
+  void onUpdate(){
+    uint8_t output[4] = {
+      desiredOutput[0],
+      desiredOutput[1],
+      desiredOutput[2],
+      desiredOutput[3]
+    };
+    bool blink = millis()/ANIM_TURBO%8<3;
+    switch(editState){
+      case HOUR:
+        if(blink){
+          output[0] = SEGMENT_BLANK;
+          output[1] = SEGMENT_BLANK;
+        };
+        display->setColon(true);
+        break;
+      case MINUTE:
+        if(blink){
+          output[2] = SEGMENT_BLANK;
+          output[3] = SEGMENT_BLANK;
+        };
+        display->setColon(true);
+        break;
+      default:
+        display->setColon(false);
+        break;
+    }
+    display->setSegments(output);
+  }
+  
+  void onButtonEvent(buttonSetEvent_t event){
+    
+    // Before moving state.
+    switch(editState){
+      
+      // When we've done nothing yet.
+      case NOTHING:
+        switch (event) {
+          case Up: MenuItem::mainMenuPrev(_EditTime_); break;
+          case Down: MenuItem::mainMenuNext(_EditTime_); break;
+          case Right: editState++; break;
+          case Left:
+            MenuItem::enter(_Home_);
+            break;
+        }
+        break;
+      
+      // Most types support jumps by 10.
+      case YEAR:
+      case DAY:
+      case HOUR:
+      case MINUTE:
+        switch(event){
+          case HoldUp: editValue += 10; break;
+          case HoldDown: editValue -= 10; break;
+        }
+      
+      // For all the other values, just jump by 1. And support moving state.
+      case MONTH:
+        switch(event){
+          case Up: editValue++; break;
+          case Down: editValue--; break;
+          case Right: editState++; break;
+          case Left: editState--; break;
+        }
+        break;
+      
+    }
+    
+    // After moving state.
+    switch(editState){
+      case NOTHING:
+        desiredOutput[0] = displaySegments[0];
+        desiredOutput[1] = displaySegments[1];
+        desiredOutput[2] = displaySegments[2];
+        desiredOutput[3] = displaySegments[3];
+        break;
+      case YEAR:
+        if(prevState != editState){
+          editValue = newTime.yr;
+          prevState = editState;
+        }else{
+          //DS1302 supports only 100 years, 2k defined by library as starting point.
+          editValue = constrain(editValue, 2000, 2099);
+          newTime.yr = editValue;
+        }
+        desiredOutput[0] = display->encodeDigit(editValue/1000%10);
+        desiredOutput[1] = display->encodeDigit(editValue/100%10);
+        desiredOutput[2] = display->encodeDigit(editValue/10%10);
+        desiredOutput[3] = display->encodeDigit(editValue%10);
+        break;
+      case MONTH:
+        if(prevState != editState){
+          editValue = newTime.mon;
+          prevState = editState;
+        }else{
+          if(editValue > 100) editValue = 1; //Watch for overflows.
+          else editValue = constrain(editValue, 1, 12);
+          newTime.mon = editValue;
+        }
+        desiredOutput[0] = SEGMENT_n;
+        desiredOutput[1] = SEGMENT_BLANK;
+        desiredOutput[2] = display->encodeDigit(editValue/10%10);
+        desiredOutput[3] = display->encodeDigit(editValue%10);
+        break;
+      case DAY:
+        if(prevState != editState){
+          editValue = newTime.date;
+          prevState = editState;
+        }else{
+          if(editValue > 100) editValue = 1; //Watch for overflows.
+          else editValue = constrain(editValue, 1, 31);
+          newTime.date = editValue;
+        }
+        desiredOutput[0] = SEGMENT_d;
+        desiredOutput[1] = SEGMENT_BLANK;
+        desiredOutput[2] = display->encodeDigit(editValue/10%10);
+        desiredOutput[3] = display->encodeDigit(editValue%10);
+        break;
+      case HOUR:
+        if(prevState != editState){
+          editValue = newTime.hr;
+          prevState = editState;
+        }else{
+          if(editValue > 100) editValue = 0; //Watch for overflows.
+          else editValue = constrain(editValue, 0, 23);
+          newTime.hr = editValue;
+        }
+        desiredOutput[0] = display->encodeDigit(editValue/10%10);
+        desiredOutput[1] = display->encodeDigit(editValue%10);
+        desiredOutput[2] = display->encodeDigit(newTime.min/10%10);
+        desiredOutput[3] = display->encodeDigit(newTime.min%10);
+        break;
+      case MINUTE:
+        if(prevState != editState){
+          editValue = newTime.min;
+          prevState = editState;
+        }else{
+          if(editValue > 100) editValue = 0; //Watch for overflows.
+          else editValue = constrain(editValue, 0, 59);
+          newTime.min = editValue;
+        }
+        desiredOutput[0] = display->encodeDigit(newTime.hr/10%10);
+        desiredOutput[1] = display->encodeDigit(newTime.hr%10);
+        desiredOutput[2] = display->encodeDigit(editValue/10%10);
+        desiredOutput[3] = display->encodeDigit(editValue%10);
+        break;
+      
+      // We are apparently done, save our things and return to the NOTHING state.
+      case SET:
+        rtcClock->writeProtect(false);
+        rtcClock->time(newTime);
+        rtcClock->writeProtect(true);
+        editState=0;
+        desiredOutput[0] = displaySegments[0];
+        desiredOutput[1] = displaySegments[1];
+        desiredOutput[2] = displaySegments[2];
+        desiredOutput[3] = displaySegments[3];
+        animator->showBlockingRunlight(CRGB::Green);
+        break;
+    }
+    
+  }
   
 };
 

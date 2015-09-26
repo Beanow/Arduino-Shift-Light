@@ -4,9 +4,6 @@
 #define RPM_TI1_PIN 8 // timer1 pin.
 #define BUFFER_DEPTH 5 // how many values to store in averaging buffer if enabled.
 
-//Normal interval.
-#define UPDATE_INTERVAL 10
-
 //LCD pins.
 #define LCDCLK 12
 #define LCDDIO 11
@@ -16,6 +13,11 @@
 #define BTN_UP 6
 #define BTN_RIGHT 7
 #define BTN_DOWN 9
+
+//RTC module pins.
+#define RTC_CE 5
+#define RTC_IO 4
+#define RTC_SCLK 3
 
 //RGB Pixels.
 #define PIXELPIN 13
@@ -29,10 +31,13 @@
 #define ANIM_FAST  300
 #define ANIM_TURBO  75
 
+//Normal interval.
+#define UPDATE_INTERVAL 10
+
 //Power off settings.
 #define POWER_OFF_TIMEOUT 3000
 #define DISPLAY_OFF_BRIGHTNESS 2
-#define ADDITIONAL_INTERVAL 190
+#define ADDITIONAL_INTERVAL 90
 
 //Some absolute minimum and maximum values.
 #define MAX_RPM_SETTING 9900

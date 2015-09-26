@@ -14,6 +14,7 @@ static MenuItem* getMenuItem(uint8_t itemIndex){switch(itemIndex){
   case _EditActivationRPM_: return new EditActivationRPMMenuItem();
   case _EditShiftRPM_: return new EditShiftRPMMenuItem();
   case _EditRPMStep_: return new EditRPMStepMenuItem();
+  case _EditTime_: return new EditTimeMenuItem();
   case _EditRPMAnimation_: return new EditRPMAnimationMenuItem();
   case _EditLCDBrightness_: return new EditLCDBrightnessMenuItem();
   case _EditColors_: return new EditColorsMenuItem();
@@ -32,6 +33,7 @@ ButtonSet* MenuItem::buttons;
 TM1637Display* MenuItem::display;
 PixelAnimator* MenuItem::animator;
 MenuItem* MenuItem::activeMenuItem;
+DS1302* MenuItem::rtcClock;
 
 void MenuItem::mainMenuNext(uint8_t currentIndex){
   currentIndex++;
@@ -92,6 +94,10 @@ void MenuItem::setButtonSet(ButtonSet* b){
 
 void MenuItem::setAnimator(PixelAnimator* a){
   animator = a;
+}
+
+void MenuItem::setRTCClock(DS1302* c){
+  rtcClock = c;
 }
 
 void MenuItem::setRPMMeasure(RPMMeasure* r){

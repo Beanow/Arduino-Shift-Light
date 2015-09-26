@@ -3,6 +3,7 @@
 #include <TM1637Display.h>
 #include <FreqMeasure.h>
 #include <InterruptFreqMeasure.h>
+#include <DS1302.h>
 #include "Config.h"
 #include "RPMMeasure.h"
 #include "ButtonSet.h"
@@ -17,11 +18,16 @@ ButtonSet* buttons = new ButtonSet(BTN_LEFT, BTN_UP, BTN_RIGHT, BTN_DOWN);
 RPMMeasure* rpm = new RPMMeasure(RPM_INT_PIN, RPM_INT_NUM, RPM_TI1_PIN);
 Config* CONFIG = new Config();
 PixelAnimator* animator = new PixelAnimator(CONFIG);
+DS1302* rtcClock = new DS1302(RTC_CE, RTC_IO, RTC_SCLK);
 
 void setup(){
   
-  // Let the debugging begin.
+  //Let the debugging begin.
   // Serial.begin(9600);
+  
+  rtcClock->writeProtect(false);
+  rtcClock->halt(false);
+  rtcClock->writeProtect(true);
   
   //Load our config from defaults/EEPROM.
   CONFIG->load();
@@ -30,6 +36,7 @@ void setup(){
   animator->setup();
   
   //Bind the required objects to the MenuItems.
+  MenuItem::setRTCClock(rtcClock);
   MenuItem::setConfig(CONFIG);
   MenuItem::setRPMMeasure(rpm);
   MenuItem::setDisplay(display);
