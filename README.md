@@ -23,7 +23,7 @@ _Should my changes get merged upstream I will modify this list._
 
 ## Menu structure
 
-![Button layout](Shiftlight.png)
+![Button layout](docs/Shiftlight.png)
 
 Displayed | Means | Range | Description
 ---------:|-------|-------|------------
@@ -57,3 +57,9 @@ Displayed | Means | Range | Description
 `tyPe` | RPM Measurement Type | 1-2 | The type of measurement to do to get the RPM signal. 1 = Interrupt based, 2 = Timer1 based.
 `rSet` | Reset | See below | Will reset all configuration to default values.
 `Sure` | Are you sure? | - | Confirmation that you want to reset to default values.
+
+## Schematics
+
+![Schematic](docs/Schematic.svg)
+
+_Created with [KiCad](http://kicad-pcb.org/), originals in `docs` folder._
