@@ -60,6 +60,6 @@ Displayed | Means | Range | Description
 
 ## Schematics
 
-![Schematic](docs/Schematic.svg)
+![Schematic](docs/Schematic.png)
 
 _Created with [KiCad](http://kicad-pcb.org/), originals in `docs` folder._
