@@ -4,12 +4,16 @@
 
 #include <EEPROMAnything.h>
 #include "_defines.h"
+#include "Profile.h"
 
 #define EEPROM_MAGIC_BYTE 0x55
 
 class Config {
   
   public:
+    
+    void setCurrentProfile(uint8_t profileIndex);
+    void setCurrentProfile(Profile profile);
     
     bool
       RPMBuffer;
@@ -20,21 +24,16 @@ class Config {
     uint8_t
       PPR,
       RPMStep,
-      RPMAnimation,
+      ProfileCount,
       PixelBrightness,
-      DisplayBrightness,
-      CLow,
-      CPart1,
-      CPart2,
-      CPart3,
-      CFlash1,
-      CFlash2;
+      DisplayBrightness;
     
     uint16_t
-      RPMStationary,
-      RPMLow,
-      RPMActivation,
-      RPMShift;
+      RPMStationary;
+    
+    Profile
+      *Profiles = NULL,
+      *CurrentProfile;
     
     void
       load(),
@@ -43,7 +42,9 @@ class Config {
   
   private:
     void applyBulk(bool read);
-  
+    
+    uint8_t currentProfileIndex;
+    
 };
 
 #endif

@@ -9,20 +9,34 @@ void Config::applyBulk(bool read){
   i += read ? READ(i, PPR) : WRITE(i, PPR);
   i += read ? READ(i, RPMStep) : WRITE(i, RPMStep);
   i += read ? READ(i, RPMBuffer) : WRITE(i, RPMBuffer);
-  i += read ? READ(i, RPMAnimation) : WRITE(i, RPMAnimation);
   i += read ? READ(i, RPMMeasureMode) : WRITE(i, RPMMeasureMode);
   i += read ? READ(i, PixelBrightness) : WRITE(i, PixelBrightness);
   i += read ? READ(i, DisplayBrightness) : WRITE(i, DisplayBrightness);
-  i += read ? READ(i, CLow) : WRITE(i, CLow);
-  i += read ? READ(i, CPart1) : WRITE(i, CPart1);
-  i += read ? READ(i, CPart2) : WRITE(i, CPart2);
-  i += read ? READ(i, CPart3) : WRITE(i, CPart3);
-  i += read ? READ(i, CFlash1) : WRITE(i, CFlash1);
-  i += read ? READ(i, CFlash2) : WRITE(i, CFlash2);
   i += read ? READ(i, RPMStationary) : WRITE(i, RPMStationary);
-  i += read ? READ(i, RPMLow) : WRITE(i, RPMLow);
-  i += read ? READ(i, RPMActivation) : WRITE(i, RPMActivation);
-  i += read ? READ(i, RPMShift) : WRITE(i, RPMShift);
+  
+  //Doing the profile parts.
+  uint8_t previousProfileCount = ProfileCount;
+  i += read ? READ(i, ProfileCount) : WRITE(i, ProfileCount);
+  i += read ? READ(i, currentProfileIndex) : WRITE(i, currentProfileIndex);
+  
+  //When we're reading, we need to manage our profiles.
+  if(read){
+    
+    //Rebuild the array if the profile count is different.
+    if(ProfileCount != previousProfileCount){
+      if (Profiles) delete[] Profiles;
+      Profiles = new Profile[ProfileCount];
+    }
+    
+    //Update our pointer to the right profile.
+    setCurrentProfile(currentProfileIndex);
+    
+  }
+  
+  //Either way, run the desired operation.
+  for (int pi = 0; pi < ProfileCount; ++pi){
+    i += read ? Profiles[pi].read(i) : Profiles[pi].write(i);
+  }
 }
 
 void Config::load(){
@@ -34,20 +48,14 @@ void Config::load(){
     PPR = DEFAULT_PPR;
     RPMStep = DEFAULT_RPM_STEP;
     RPMBuffer = DEFAULT_RPM_BUFFER;
-    RPMAnimation = DEFAULT_RPM_ANIMATION;
     RPMMeasureMode = DEFAULT_RPM_MEASUREMODE;
     PixelBrightness = DEFAULT_PIXEL_BRIGHTNESS;
     DisplayBrightness = DEFAULT_DISPLAY_BRIGHTNESS;
-    CLow = DEFAULT_CLOW;
-    CPart1 = DEFAULT_CPART1;
-    CPart2 = DEFAULT_CPART2;
-    CPart3 = DEFAULT_CPART3;
-    CFlash1 = DEFAULT_CFLASH1;
-    CFlash2 = DEFAULT_CFLASH2;
     RPMStationary = DEFAULT_RPM_STATIONARY;
-    RPMLow = DEFAULT_RPM_LOW;
-    RPMActivation = DEFAULT_RPM_ACTIVATION;
-    RPMShift = DEFAULT_RPM_SHIFT;
+    ProfileCount = 1;
+    if (Profiles) delete[] Profiles;
+    Profiles = new Profile[1];
+    setCurrentProfile(0);
     return;
   }
   
@@ -55,11 +63,27 @@ void Config::load(){
   applyBulk(true);
   
   //Do a few sanity checks.
-  if(PPR > 12 || RPMBuffer > 1 || RPMMeasureMode > 1){
+  if(PPR > 12 || RPMBuffer > 1 || RPMMeasureMode > 1 || ProfileCount > 10){
     //Unfortunately we've gone full EEPtard. Never go full EEPtard.
     reset();
   }
   
+}
+
+void Config::setCurrentProfile(Profile profile){
+  for (int i = 0; i < ProfileCount; ++i){
+    if(&profile == &(Profiles[i])){
+      currentProfileIndex = i;
+      CurrentProfile = &(Profiles[i]);
+      return;
+    }
+  }
+}
+
+void Config::setCurrentProfile(uint8_t profileIndex){
+  if(profileIndex >= ProfileCount) return;
+  currentProfileIndex = profileIndex;
+  CurrentProfile = &(Profiles[profileIndex]);
 }
 
 void Config::save(){

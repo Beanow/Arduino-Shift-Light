@@ -436,7 +436,7 @@ class EditStationaryRPMMenuItem : public RPMEditingMenuItem {
   };
   
   void onLeave(){
-    if(didEdit) CONFIG->RPMStationary = constrain(CONFIG->RPMStationary, MIN_RPM_SETTING, CONFIG->RPMActivation);
+    if(didEdit) CONFIG->RPMStationary = constrain(CONFIG->RPMStationary, MIN_RPM_SETTING, CONFIG->CurrentProfile->RPMActivation);
   }
   
   void onUpdate(){
@@ -448,7 +448,7 @@ class EditStationaryRPMMenuItem : public RPMEditingMenuItem {
   }
   
   void onValueChange(int difference){
-    CONFIG->RPMStationary = constrain(CONFIG->RPMStationary+difference, MIN_RPM_SETTING, CONFIG->RPMActivation);
+    CONFIG->RPMStationary = constrain(CONFIG->RPMStationary+difference, MIN_RPM_SETTING, CONFIG->CurrentProfile->RPMActivation);
   }
   
   void onButtonEvent(buttonSetEvent_t event){
@@ -485,13 +485,13 @@ class EditLowRPMMenuItem : public RPMEditingMenuItem {
   };
   
   void onLeave(){
-    if(didEdit) CONFIG->RPMLow = constrain(CONFIG->RPMLow, 0, CONFIG->RPMActivation);
+    if(didEdit) CONFIG->CurrentProfile->RPMLow = constrain(CONFIG->CurrentProfile->RPMLow, 0, CONFIG->CurrentProfile->RPMActivation);
   }
   
   void onUpdate(){
     if(editing){
-      if(CONFIG->RPMLow > 0){
-        display->showNumberDec(CONFIG->RPMLow);
+      if(CONFIG->CurrentProfile->RPMLow > 0){
+        display->showNumberDec(CONFIG->CurrentProfile->RPMLow);
       } else {
         display->setSegments(offSegments);
       }
@@ -502,15 +502,15 @@ class EditLowRPMMenuItem : public RPMEditingMenuItem {
   
   void onValueChange(int difference){
     //Low is special, since 0 == OFF, increases should start from stationary.
-    if(CONFIG->RPMLow == 0){
-      CONFIG->RPMLow = CONFIG->RPMStationary;
+    if(CONFIG->CurrentProfile->RPMLow == 0){
+      CONFIG->CurrentProfile->RPMLow = CONFIG->RPMStationary;
     }
     
-    CONFIG->RPMLow = constrain(CONFIG->RPMLow+difference, CONFIG->RPMStationary, CONFIG->RPMActivation);
+    CONFIG->CurrentProfile->RPMLow = constrain(CONFIG->CurrentProfile->RPMLow+difference, CONFIG->RPMStationary, CONFIG->CurrentProfile->RPMActivation);
     
     //When we're back to stationary, that means we decreased into OFF.
-    if(CONFIG->RPMLow == CONFIG->RPMStationary){
-      CONFIG->RPMLow = 0;
+    if(CONFIG->CurrentProfile->RPMLow == CONFIG->RPMStationary){
+      CONFIG->CurrentProfile->RPMLow = 0;
     }
   }
   
@@ -541,19 +541,19 @@ class EditActivationRPMMenuItem : public RPMEditingMenuItem {
   };
   
   void onLeave(){
-    if(didEdit) CONFIG->RPMShift = max(CONFIG->RPMActivation, CONFIG->RPMShift);
+    if(didEdit) CONFIG->CurrentProfile->RPMShift = max(CONFIG->CurrentProfile->RPMActivation, CONFIG->CurrentProfile->RPMShift);
   }
   
   void onUpdate(){
     if(editing){
-      display->showNumberDec(CONFIG->RPMActivation);
+      display->showNumberDec(CONFIG->CurrentProfile->RPMActivation);
     } else {
       display->setSegments(displaySegments);
     }
   }
   
   void onValueChange(int difference){
-    CONFIG->RPMActivation = constrain(CONFIG->RPMActivation+difference, MIN_RPM_SETTING, CONFIG->RPMShift);
+    CONFIG->CurrentProfile->RPMActivation = constrain(CONFIG->CurrentProfile->RPMActivation+difference, MIN_RPM_SETTING, CONFIG->CurrentProfile->RPMShift);
   }
   
   void onButtonEvent(buttonSetEvent_t event){
@@ -583,19 +583,19 @@ class EditShiftRPMMenuItem : public RPMEditingMenuItem {
   };
   
   void onLeave(){
-    if(didEdit) CONFIG->RPMShift = max(CONFIG->RPMShift, CONFIG->RPMShift);
+    if(didEdit) CONFIG->CurrentProfile->RPMShift = constrain(CONFIG->CurrentProfile->RPMShift, CONFIG->CurrentProfile->RPMActivation, MAX_RPM_SETTING);
   }
   
   void onUpdate(){
     if(editing){
-      display->showNumberDec(CONFIG->RPMShift);
+      display->showNumberDec(CONFIG->CurrentProfile->RPMShift);
     } else {
       display->setSegments(displaySegments);
     }
   }
   
   void onValueChange(int difference){
-    CONFIG->RPMShift = constrain(CONFIG->RPMShift+difference, CONFIG->RPMActivation, MAX_RPM_SETTING);
+    CONFIG->CurrentProfile->RPMShift = constrain(CONFIG->CurrentProfile->RPMShift+difference, CONFIG->CurrentProfile->RPMActivation, MAX_RPM_SETTING);
   }
   
   void onButtonEvent(buttonSetEvent_t event){
@@ -697,7 +697,7 @@ class EditRPMAnimationMenuItem : public EditingMenuItem {
   
   void onUpdate(){
     if(editing){
-      display->setSegments(animationNames[CONFIG->RPMAnimation]);
+      display->setSegments(animationNames[CONFIG->CurrentProfile->RPMAnimation]);
     } else {
       display->setSegments(displaySegments);
     }
@@ -709,12 +709,12 @@ class EditRPMAnimationMenuItem : public EditingMenuItem {
     
     case Up:
       if(!editing) MenuItem::mainMenuPrev(_EditRPMAnimation_);
-      else CONFIG->RPMAnimation = max(CONFIG->RPMAnimation-1, 0);
+      else CONFIG->CurrentProfile->RPMAnimation = max(CONFIG->CurrentProfile->RPMAnimation-1, 0);
       break;
     
     case Down:
       if(!editing) MenuItem::mainMenuNext(_EditRPMAnimation_);
-      else CONFIG->RPMAnimation = min(CONFIG->RPMAnimation+1, 4);
+      else CONFIG->CurrentProfile->RPMAnimation = min(CONFIG->CurrentProfile->RPMAnimation+1, 4);
       break;
     
     case Left:
@@ -770,7 +770,7 @@ class EditColorLowMenuItem : public ColorEditingMenuItem {
   };
   
   void onEnter(){
-    colorIndex = CONFIG->CLow;
+    colorIndex = CONFIG->CurrentProfile->CLow;
     allowBlack = false;
     ColorEditingMenuItem::onEnter();
     display->setSegments(displaySegments);
@@ -778,7 +778,7 @@ class EditColorLowMenuItem : public ColorEditingMenuItem {
   
   void onLeave(){
     if(didEdit){
-      CONFIG->CLow = colorIndex;
+      CONFIG->CurrentProfile->CLow = colorIndex;
       animator->updateColors();
     }
   }
@@ -804,7 +804,7 @@ class EditColorPart1MenuItem : public ColorEditingMenuItem {
   };
   
   void onEnter(){
-    colorIndex = CONFIG->CPart1;
+    colorIndex = CONFIG->CurrentProfile->CPart1;
     allowBlack = false;
     ColorEditingMenuItem::onEnter();
     display->setSegments(displaySegments);
@@ -812,7 +812,7 @@ class EditColorPart1MenuItem : public ColorEditingMenuItem {
   
   void onLeave(){
     if(didEdit){
-      CONFIG->CPart1 = colorIndex;
+      CONFIG->CurrentProfile->CPart1 = colorIndex;
       animator->updateColors();
     }
   }
@@ -838,7 +838,7 @@ class EditColorPart2MenuItem : public ColorEditingMenuItem {
   };
   
   void onEnter(){
-    colorIndex = CONFIG->CPart2;
+    colorIndex = CONFIG->CurrentProfile->CPart2;
     allowBlack = false;
     ColorEditingMenuItem::onEnter();
     display->setSegments(displaySegments);
@@ -846,7 +846,7 @@ class EditColorPart2MenuItem : public ColorEditingMenuItem {
   
   void onLeave(){
     if(didEdit){
-      CONFIG->CPart2 = colorIndex;
+      CONFIG->CurrentProfile->CPart2 = colorIndex;
       animator->updateColors();
     }
   }
@@ -872,7 +872,7 @@ class EditColorPart3MenuItem : public ColorEditingMenuItem {
   };
   
   void onEnter(){
-    colorIndex = CONFIG->CPart3;
+    colorIndex = CONFIG->CurrentProfile->CPart3;
     allowBlack = false;
     ColorEditingMenuItem::onEnter();
     display->setSegments(displaySegments);
@@ -880,7 +880,7 @@ class EditColorPart3MenuItem : public ColorEditingMenuItem {
   
   void onLeave(){
     if(didEdit){
-      CONFIG->CPart3 = colorIndex;
+      CONFIG->CurrentProfile->CPart3 = colorIndex;
       animator->updateColors();
     }
   }
@@ -906,7 +906,7 @@ class EditColorFlash1MenuItem : public ColorEditingMenuItem {
   };
   
   void onEnter(){
-    colorIndex = CONFIG->CFlash1;
+    colorIndex = CONFIG->CurrentProfile->CFlash1;
     allowBlack = false;
     ColorEditingMenuItem::onEnter();
     display->setSegments(displaySegments);
@@ -914,7 +914,7 @@ class EditColorFlash1MenuItem : public ColorEditingMenuItem {
   
   void onLeave(){
     if(didEdit){
-      CONFIG->CFlash1 = colorIndex;
+      CONFIG->CurrentProfile->CFlash1 = colorIndex;
       animator->updateColors();
     }
   }
@@ -940,7 +940,7 @@ class EditColorFlash2MenuItem : public ColorEditingMenuItem {
   };
   
   void onEnter(){
-    colorIndex = CONFIG->CFlash2;
+    colorIndex = CONFIG->CurrentProfile->CFlash2;
     allowBlack = true;
     ColorEditingMenuItem::onEnter();
     display->setSegments(displaySegments);
@@ -948,7 +948,7 @@ class EditColorFlash2MenuItem : public ColorEditingMenuItem {
   
   void onLeave(){
     if(didEdit){
-      CONFIG->CFlash2 = colorIndex;
+      CONFIG->CurrentProfile->CFlash2 = colorIndex;
       animator->updateColors();
     }
   }

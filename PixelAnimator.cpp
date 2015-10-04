@@ -25,12 +25,12 @@ void PixelAnimator::setBrightness(uint8_t brightness){
 }
 
 void PixelAnimator::updateColors(){
-  CLow = ColorPicker::at(CONFIG->CLow);
-  CPart1 = ColorPicker::at(CONFIG->CPart1);
-  CPart2 = ColorPicker::at(CONFIG->CPart2);
-  CPart3 = ColorPicker::at(CONFIG->CPart3);
-  CFlash1 = ColorPicker::at(CONFIG->CFlash1);
-  CFlash2 = ColorPicker::at(CONFIG->CFlash2, true);
+  CLow = ColorPicker::at(CONFIG->CurrentProfile->CLow);
+  CPart1 = ColorPicker::at(CONFIG->CurrentProfile->CPart1);
+  CPart2 = ColorPicker::at(CONFIG->CurrentProfile->CPart2);
+  CPart3 = ColorPicker::at(CONFIG->CurrentProfile->CPart3);
+  CFlash1 = ColorPicker::at(CONFIG->CurrentProfile->CFlash1);
+  CFlash2 = ColorPicker::at(CONFIG->CurrentProfile->CFlash2, true);
 }
 
 void PixelAnimator::show(){
@@ -42,13 +42,13 @@ void PixelAnimator::setRPM(uint16_t rpm){
   int litPixels, blackPixels, midPoint;
   bool shift = false, blank = false, low = false;
   
-  if(rpm >= CONFIG->RPMShift){ shift = true; }
-  else if(rpm <= CONFIG->RPMLow && rpm > CONFIG->RPMStationary){ low = true; }
-  else if(rpm <= CONFIG->RPMActivation){ blank = true; }
+  if(rpm >= CONFIG->CurrentProfile->RPMShift){ shift = true; }
+  else if(rpm <= CONFIG->CurrentProfile->RPMLow && rpm > CONFIG->RPMStationary){ low = true; }
+  else if(rpm <= CONFIG->CurrentProfile->RPMActivation){ blank = true; }
   else{
     float fillRange, fillOffset;
-    fillOffset = rpm - CONFIG->RPMActivation;
-    fillRange = CONFIG->RPMShift - CONFIG->RPMActivation;
+    fillOffset = rpm - CONFIG->CurrentProfile->RPMActivation;
+    fillRange = CONFIG->CurrentProfile->RPMShift - CONFIG->CurrentProfile->RPMActivation;
     litPixels = fillOffset / fillRange * NUMPIXELS;
   }
   
@@ -73,7 +73,7 @@ void PixelAnimator::setRPM(uint16_t rpm){
   else{
     
     // Pick a filling style.
-    switch(CONFIG->RPMAnimation){
+    switch(CONFIG->CurrentProfile->RPMAnimation){
       
       default:
       case RPMAnimation::LeftToRight:
