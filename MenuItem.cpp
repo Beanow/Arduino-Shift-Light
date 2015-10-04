@@ -27,6 +27,7 @@ static MenuItem* getMenuItem(uint8_t itemIndex){switch(itemIndex){
   case _EditColorFlash1_: return new EditColorFlash1MenuItem();
   case _EditColorFlash2_: return new EditColorFlash2MenuItem();
   case _Reset_: return new ResetMenuItem();
+  case _DeleteProfile_: return new DeleteProfileMenuItem();
 }}
 
 Config* MenuItem::CONFIG;

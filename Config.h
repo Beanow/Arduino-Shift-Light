@@ -14,7 +14,7 @@ class Config {
     Profile* newProfile();
     uint8_t getProfileCount();
     uint8_t getCurrentProfileIndex();
-    void setCurrentProfile(Profile profile);
+    void deleteProfile(Profile* profile);
     void setCurrentProfile(uint8_t profileIndex);
     
     bool

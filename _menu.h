@@ -30,8 +30,9 @@
 #define _EditProfileShiftRPM_ 33
 #define _EditProfileRPMAnimation_ 34
 #define _EditProfileColors_ 35
+#define _DeleteProfile_ 36
 #define FIRST_PROFILE_MENU_ITEM _EditProfileLowRPM_ //Constraint the profile menu.
-#define LAST_PROFILE_MENU_ITEM _EditProfileColors_ //Constraint the profile menu.
+#define LAST_PROFILE_MENU_ITEM _DeleteProfile_ //Constraint the profile menu.
 
 #define _EditColorLow_ 40
 #define _EditColorPart1_ 41
@@ -302,11 +303,12 @@ class ProfileListingMenuItem : public MenuItem {
   void onEnter(){
     //If we came from the menu item below us, behave differently.
     bool reverse = prevMenuItemIndex == _ProfileListing_+1;
-    profileIndex = reverse ? CONFIG->getProfileCount() : 0;
+    bool maxed = CONFIG->getProfileCount() == MAX_PROFILES;
+    profileIndex = reverse ? CONFIG->getProfileCount()-(maxed?1:0) : 0;
     displaySegments[0] = displaySegmentsPrefix[0];
     displaySegments[1] = displaySegmentsPrefix[1];
-    displaySegments[2] = reverse ? SEGMENT_DASH : SEGMENT_BLANK;
-    displaySegments[3] = reverse ? SEGMENT_DASH : display->encodeDigit(profileIndex+1);
+    displaySegments[2] = reverse && !maxed ? SEGMENT_DASH : SEGMENT_BLANK;
+    displaySegments[3] = reverse && !maxed ? SEGMENT_DASH : display->encodeDigit(profileIndex+1);
     display->setSegments(displaySegments);
   }
   
@@ -325,7 +327,7 @@ class ProfileListingMenuItem : public MenuItem {
     
     case Down:
       profileIndex++;
-      if(profileIndex > CONFIG->getProfileCount())
+      if(profileIndex > CONFIG->getProfileCount() || profileIndex == MAX_PROFILES)
         MenuItem::mainMenuNext(_ProfileListing_);
       else if(profileIndex == CONFIG->getProfileCount()){
         displaySegments[2] = SEGMENT_DASH;
@@ -594,7 +596,7 @@ class EditStationaryRPMMenuItem : public RPMEditingMenuItem {
     case Down: if(!editing) MenuItem::mainMenuNext(_EditStationaryRPM_); break;
     
     case Left:
-      MenuItem::enter(_Home_);
+      MenuItem::enter(_ProfileListing_);
       CONFIG->save();
       break;
     
@@ -657,7 +659,7 @@ class EditProfileLowRPMMenuItem : public RPMEditingMenuItem {
     case Down: if(!editing) MenuItem::profileMenuNext(_EditProfileLowRPM_); break;
     
     case Left:
-      MenuItem::enter(_Home_);
+      MenuItem::enter(_ProfileListing_);
       CONFIG->save();
       break;
     
@@ -699,7 +701,7 @@ class EditProfileActivationRPMMenuItem : public RPMEditingMenuItem {
     case Down: if(!editing) MenuItem::profileMenuNext(_EditProfileActivationRPM_); break;
     
     case Left:
-      MenuItem::enter(_Home_);
+      MenuItem::enter(_ProfileListing_);
       CONFIG->save();
       break;
     
@@ -741,7 +743,7 @@ class EditProfileShiftRPMMenuItem : public RPMEditingMenuItem {
     case Down: if(!editing) MenuItem::profileMenuNext(_EditProfileShiftRPM_); break;
     
     case Left:
-      MenuItem::enter(_Home_);
+      MenuItem::enter(_ProfileListing_);
       CONFIG->save();
       break;
     
@@ -808,7 +810,7 @@ class EditRPMStepMenuItem : public EditingMenuItem {
   
 };
 
-/* ==  EditRPMAnimation == */
+/* ==  EditProfileRPMAnimation == */
 class EditProfileRPMAnimationMenuItem : public EditingMenuItem {
   
   uint8_t displaySegments[4] = {
@@ -853,7 +855,7 @@ class EditProfileRPMAnimationMenuItem : public EditingMenuItem {
       break;
     
     case Left:
-      MenuItem::enter(_Home_);
+      MenuItem::enter(_ProfileListing_);
       CONFIG->save();
       break;
     
@@ -882,11 +884,11 @@ class EditProfileColorsMenuItem : public MenuItem {
     case Down: MenuItem::profileMenuNext(_EditProfileColors_); break;
     
     case Right:
-      MenuItem::enter(_EditColorLow_);
+      MenuItem::enter(FIRST_COLOR_MENU_ITEM);
       break;
     
     case Left:
-      MenuItem::enter(_Home_);
+      MenuItem::enter(_ProfileListing_);
       CONFIG->save();
       break;
     
@@ -1145,8 +1147,71 @@ class ResetMenuItem : public MenuItem {
       break;
     
     case Left:
-      MenuItem::enter(_Home_);
-      CONFIG->save();
+      if(sure){
+        sure = false;
+        display->setSegments(displaySegments);
+      }
+      else{
+        MenuItem::enter(_Home_);
+        CONFIG->save();
+      }
+      break;
+    
+  }}
+  
+};
+
+/* ==  DeleteProfile == */
+class DeleteProfileMenuItem : public MenuItem {
+  
+  bool sure;
+  
+  uint8_t displaySegments[4] = {
+    SEGMENT_BLANK,
+    SEGMENT_d,
+    SEGMENT_e,
+    SEGMENT_l
+  };
+  
+  uint8_t sureSegments[4] = {
+    SEGMENT_S,
+    SEGMENT_u,
+    SEGMENT_r,
+    SEGMENT_e
+  };
+  
+  void onEnter(){
+    sure=false;
+    display->setSegments(displaySegments);
+  }
+  
+  void onButtonEvent(buttonSetEvent_t event){
+    switch (event) {
+    
+    case Up: MenuItem::profileMenuPrev(_DeleteProfile_); break;
+    case Down: MenuItem::profileMenuNext(_DeleteProfile_); break;
+    
+    case Right:
+      if(!sure){
+        sure=true;
+        display->setSegments(sureSegments);
+      }
+      else{
+        CONFIG->deleteProfile(PROFILE);
+        animator->updateColors();
+        MenuItem::enter(_ProfileListing_);
+      }
+      break;
+    
+    case Left:
+      if(sure){
+        sure = false;
+        display->setSegments(displaySegments);
+      }
+      else{
+        MenuItem::enter(_ProfileListing_);
+        CONFIG->save();
+      }
       break;
     
   }}

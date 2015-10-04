@@ -42,6 +42,7 @@
 //Some absolute minimum and maximum values.
 #define MAX_RPM_SETTING 9900
 #define MIN_RPM_SETTING 1000
+#define MAX_PROFILES 5
 
 //A load of default values.
 #define DEFAULT_PPR 4 // pulses per revolution.

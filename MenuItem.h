@@ -105,6 +105,7 @@ class ColorEditingMenuItem : public EditingMenuItem {
       switch(event){
         case Up: color = ColorPicker::prev(colorIndex, allowBlack); break;
         case Down: color = ColorPicker::next(colorIndex, allowBlack); break;
+        case Left: animator->setFill(CRGB::Black); animator->show(); break;
       }
     }
     void onUpdate(){

@@ -73,16 +73,6 @@ void Config::load(){
 uint8_t Config::getProfileCount(){ return profileCount; }
 uint8_t Config::getCurrentProfileIndex(){ return currentProfileIndex; }
 
-void Config::setCurrentProfile(Profile profile){
-  for (int i = 0; i < profileCount; ++i){
-    if(&profile == &(Profiles[i])){
-      currentProfileIndex = i;
-      CurrentProfile = &(Profiles[i]);
-      return;
-    }
-  }
-}
-
 void Config::setCurrentProfile(uint8_t profileIndex){
   if(profileIndex >= profileCount) return;
   currentProfileIndex = profileIndex;
@@ -90,6 +80,8 @@ void Config::setCurrentProfile(uint8_t profileIndex){
 }
 
 Profile* Config::newProfile(){
+  if(profileCount == MAX_PROFILES) return NULL;
+  
   Profile* oldProfiles = Profiles;
   Profiles = new Profile[++profileCount];
   for (int i = 0; i < profileCount-1; ++i){
@@ -98,6 +90,46 @@ Profile* Config::newProfile(){
   delete[] oldProfiles;
   setCurrentProfile(currentProfileIndex);
   return &(Profiles[profileCount-1]);
+}
+
+void Config::deleteProfile(Profile* profile){
+  
+  //Prevent deleting our last profile.
+  if(profileCount == 1) return;
+  
+  //First find our target.
+  uint8_t profileIndex = 255;
+  for (int i = 0; i < profileCount; ++i){
+    if(profile == &(Profiles[i])){
+      profileIndex = i;
+      break;
+    }
+  }
+  
+  //Could find this profile.
+  if(profileIndex == 255) return;
+  
+  //Shift our current profile index down by one if we delete it or the ones in front of it.
+  if(currentProfileIndex > 0 && profileIndex <= currentProfileIndex)
+    currentProfileIndex--;
+  
+  //Shrink the array.
+  Profile* oldProfiles = Profiles;
+  Profiles = new Profile[--profileCount];
+  
+  
+  //Copy everything except for the targeted one.
+  int isource = 0;
+  for (int itarget = 0; itarget < profileCount; ++itarget){
+    if(isource == profileIndex) isource++;
+    memcpy(&(Profiles[itarget]), &(oldProfiles[isource]), sizeof(Profile));
+    isource++;
+  }
+  
+  //Clean up.
+  delete[] oldProfiles;
+  setCurrentProfile(currentProfileIndex);
+  
 }
 
 void Config::save(){
