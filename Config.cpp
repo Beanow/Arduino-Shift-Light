@@ -15,17 +15,17 @@ void Config::applyBulk(bool read){
   i += read ? READ(i, RPMStationary) : WRITE(i, RPMStationary);
   
   //Doing the profile parts.
-  uint8_t previousProfileCount = ProfileCount;
-  i += read ? READ(i, ProfileCount) : WRITE(i, ProfileCount);
+  uint8_t previousProfileCount = profileCount;
+  i += read ? READ(i, profileCount) : WRITE(i, profileCount);
   i += read ? READ(i, currentProfileIndex) : WRITE(i, currentProfileIndex);
   
   //When we're reading, we need to manage our profiles.
   if(read){
     
     //Rebuild the array if the profile count is different.
-    if(ProfileCount != previousProfileCount){
+    if(profileCount != previousProfileCount){
       if (Profiles) delete[] Profiles;
-      Profiles = new Profile[ProfileCount];
+      Profiles = new Profile[profileCount];
     }
     
     //Update our pointer to the right profile.
@@ -34,7 +34,7 @@ void Config::applyBulk(bool read){
   }
   
   //Either way, run the desired operation.
-  for (int pi = 0; pi < ProfileCount; ++pi){
+  for (int pi = 0; pi < profileCount; ++pi){
     i += read ? Profiles[pi].read(i) : Profiles[pi].write(i);
   }
 }
@@ -52,7 +52,7 @@ void Config::load(){
     PixelBrightness = DEFAULT_PIXEL_BRIGHTNESS;
     DisplayBrightness = DEFAULT_DISPLAY_BRIGHTNESS;
     RPMStationary = DEFAULT_RPM_STATIONARY;
-    ProfileCount = 1;
+    profileCount = 1;
     if (Profiles) delete[] Profiles;
     Profiles = new Profile[1];
     setCurrentProfile(0);
@@ -63,15 +63,18 @@ void Config::load(){
   applyBulk(true);
   
   //Do a few sanity checks.
-  if(PPR > 12 || RPMBuffer > 1 || RPMMeasureMode > 1 || ProfileCount > 10){
+  if(PPR > 12 || RPMBuffer > 1 || RPMMeasureMode > 1 || profileCount > 10){
     //Unfortunately we've gone full EEPtard. Never go full EEPtard.
     reset();
   }
   
 }
 
+uint8_t Config::getProfileCount(){ return profileCount; }
+uint8_t Config::getCurrentProfileIndex(){ return currentProfileIndex; }
+
 void Config::setCurrentProfile(Profile profile){
-  for (int i = 0; i < ProfileCount; ++i){
+  for (int i = 0; i < profileCount; ++i){
     if(&profile == &(Profiles[i])){
       currentProfileIndex = i;
       CurrentProfile = &(Profiles[i]);
@@ -81,9 +84,20 @@ void Config::setCurrentProfile(Profile profile){
 }
 
 void Config::setCurrentProfile(uint8_t profileIndex){
-  if(profileIndex >= ProfileCount) return;
+  if(profileIndex >= profileCount) return;
   currentProfileIndex = profileIndex;
   CurrentProfile = &(Profiles[profileIndex]);
+}
+
+Profile* Config::newProfile(){
+  Profile* oldProfiles = Profiles;
+  Profiles = new Profile[++profileCount];
+  for (int i = 0; i < profileCount-1; ++i){
+    memcpy(&(Profiles[i]), &(oldProfiles[i]), sizeof(Profile));
+  }
+  delete[] oldProfiles;
+  setCurrentProfile(currentProfileIndex);
+  return &(Profiles[profileCount-1]);
 }
 
 void Config::save(){

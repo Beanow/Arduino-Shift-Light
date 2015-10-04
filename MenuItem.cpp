@@ -5,19 +5,21 @@
 static MenuItem* getMenuItem(uint8_t itemIndex){switch(itemIndex){
   case _Home_: return new HomeMenuItem();
   case _QuickBrightness_: return new QuickBrightnessMenuItem();
+  case _ProfileSwitcher_: return new ProfileSwitcherMenuItem();
   case _MainMenu_: return new MainMenuMenuItem();
+  case _ProfileListing_: return new ProfileListingMenuItem();
   case _EditRPMBuffer_: return new EditRPMBufferMenuItem();
   case _EditRPMMeasureMode_: return new EditRPMMeasureModeMenuItem();
   case _EditPPR_: return new EditPPRMenuItem();
   case _EditStationaryRPM_: return new EditStationaryRPMMenuItem();
-  case _EditLowRPM_: return new EditLowRPMMenuItem();
-  case _EditActivationRPM_: return new EditActivationRPMMenuItem();
-  case _EditShiftRPM_: return new EditShiftRPMMenuItem();
   case _EditRPMStep_: return new EditRPMStepMenuItem();
   case _EditTime_: return new EditTimeMenuItem();
-  case _EditRPMAnimation_: return new EditRPMAnimationMenuItem();
   case _EditLCDBrightness_: return new EditLCDBrightnessMenuItem();
-  case _EditColors_: return new EditColorsMenuItem();
+  case _EditProfileLowRPM_: return new EditProfileLowRPMMenuItem();
+  case _EditProfileActivationRPM_: return new EditProfileActivationRPMMenuItem();
+  case _EditProfileShiftRPM_: return new EditProfileShiftRPMMenuItem();
+  case _EditProfileRPMAnimation_: return new EditProfileRPMAnimationMenuItem();
+  case _EditProfileColors_: return new EditProfileColorsMenuItem();
   case _EditColorLow_: return new EditColorLowMenuItem();
   case _EditColorPart1_: return new EditColorPart1MenuItem();
   case _EditColorPart2_: return new EditColorPart2MenuItem();
@@ -28,12 +30,14 @@ static MenuItem* getMenuItem(uint8_t itemIndex){switch(itemIndex){
 }}
 
 Config* MenuItem::CONFIG;
+Profile* MenuItem::PROFILE;
 RPMMeasure* MenuItem::rpm;
 ButtonSet* MenuItem::buttons;
 TM1637Display* MenuItem::display;
 PixelAnimator* MenuItem::animator;
 MenuItem* MenuItem::activeMenuItem;
 DS1302* MenuItem::rtcClock;
+uint8_t MenuItem::prevMenuItemIndex = _Home_;
 
 void MenuItem::mainMenuNext(uint8_t currentIndex){
   currentIndex++;
@@ -67,8 +71,25 @@ void MenuItem::colorMenuPrev(uint8_t currentIndex){
   enter(currentIndex);
 }
 
+void MenuItem::profileMenuNext(uint8_t currentIndex){
+  currentIndex++;
+  if(currentIndex > LAST_PROFILE_MENU_ITEM){
+    currentIndex = FIRST_PROFILE_MENU_ITEM;
+  }
+  enter(currentIndex);
+}
+
+void MenuItem::profileMenuPrev(uint8_t currentIndex){
+  currentIndex--;
+  if(currentIndex < FIRST_PROFILE_MENU_ITEM){
+    currentIndex = LAST_PROFILE_MENU_ITEM;
+  }
+  enter(currentIndex);
+}
+
 void MenuItem::enter(uint8_t itemIndex){
   enter(getMenuItem(itemIndex));
+  prevMenuItemIndex = itemIndex;
 }
 
 void MenuItem::update(){
@@ -85,6 +106,7 @@ void MenuItem::onButtonSetEvent(buttonSetEvent_t event){
 
 void MenuItem::setConfig(Config* c){
   CONFIG = c;
+  PROFILE = &(CONFIG->Profiles[0]);
 }
 
 void MenuItem::setButtonSet(ButtonSet* b){

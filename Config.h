@@ -6,14 +6,16 @@
 #include "_defines.h"
 #include "Profile.h"
 
-#define EEPROM_MAGIC_BYTE 0x55
+#define EEPROM_MAGIC_BYTE 0x56
 
 class Config {
   
   public:
-    
-    void setCurrentProfile(uint8_t profileIndex);
+    Profile* newProfile();
+    uint8_t getProfileCount();
+    uint8_t getCurrentProfileIndex();
     void setCurrentProfile(Profile profile);
+    void setCurrentProfile(uint8_t profileIndex);
     
     bool
       RPMBuffer;
@@ -24,7 +26,6 @@ class Config {
     uint8_t
       PPR,
       RPMStep,
-      ProfileCount,
       PixelBrightness,
       DisplayBrightness;
     
@@ -43,7 +44,9 @@ class Config {
   private:
     void applyBulk(bool read);
     
-    uint8_t currentProfileIndex;
+    uint8_t
+      profileCount,
+      currentProfileIndex;
     
 };
 

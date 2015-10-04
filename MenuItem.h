@@ -31,6 +31,8 @@ class MenuItem {
     static void mainMenuPrev(uint8_t currentIndex);
     static void colorMenuNext(uint8_t currentIndex);
     static void colorMenuPrev(uint8_t currentIndex);
+    static void profileMenuNext(uint8_t currentIndex);
+    static void profileMenuPrev(uint8_t currentIndex);
     virtual void onEnter(){}
     virtual void onButtonEvent(buttonSetEvent_t event){}
     virtual void onUpdate(){}
@@ -38,12 +40,14 @@ class MenuItem {
   
   protected:
     static Config* CONFIG;
+    static Profile* PROFILE;
     static RPMMeasure* rpm;
     static ButtonSet* buttons;
     static TM1637Display* display;
     static PixelAnimator* animator;
     static MenuItem* activeMenuItem;
     static DS1302* rtcClock;
+    static uint8_t prevMenuItemIndex;
   
 };
 

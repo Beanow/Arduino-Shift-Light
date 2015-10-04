@@ -4,7 +4,6 @@
 
 #include "MenuItem.h"
 #include <FastLED.h>
-// #include <DS1302.h>
 #include "_defines.h"
 #include "_menuHelpers.h"
 
@@ -12,29 +11,34 @@
 //Their numbers also define the menu ordering.
 #define _Home_ 1
 #define _QuickBrightness_ 2
+#define _ProfileSwitcher_ 3
 
 #define _MainMenu_ 10 //This is always the first main menu item.
-#define _EditStationaryRPM_ 11
-#define _EditLowRPM_ 12
-#define _EditActivationRPM_ 13
-#define _EditShiftRPM_ 14
-#define _EditRPMAnimation_ 15
-#define _EditColors_ 16
-#define _EditLCDBrightness_ 17
-#define _EditRPMStep_ 18
-#define _EditTime_ 19
-#define _EditPPR_ 20
-#define _EditRPMBuffer_ 21
-#define _EditRPMMeasureMode_ 22
-#define _Reset_ 23
+#define _ProfileListing_ 11
+#define _EditLCDBrightness_ 12
+#define _EditTime_ 13
+#define _EditRPMStep_ 14
+#define _EditStationaryRPM_ 15
+#define _EditPPR_ 16
+#define _EditRPMBuffer_ 17
+#define _EditRPMMeasureMode_ 18
+#define _Reset_ 19
 #define LAST_MAIN_MENU_ITEM _Reset_ //Constraint the main menu.
 
-#define _EditColorLow_ 30
-#define _EditColorPart1_ 31
-#define _EditColorPart2_ 32
-#define _EditColorPart3_ 33
-#define _EditColorFlash1_ 34
-#define _EditColorFlash2_ 35
+#define _EditProfileLowRPM_ 31
+#define _EditProfileActivationRPM_ 32
+#define _EditProfileShiftRPM_ 33
+#define _EditProfileRPMAnimation_ 34
+#define _EditProfileColors_ 35
+#define FIRST_PROFILE_MENU_ITEM _EditProfileLowRPM_ //Constraint the profile menu.
+#define LAST_PROFILE_MENU_ITEM _EditProfileColors_ //Constraint the profile menu.
+
+#define _EditColorLow_ 40
+#define _EditColorPart1_ 41
+#define _EditColorPart2_ 42
+#define _EditColorPart3_ 43
+#define _EditColorFlash1_ 44
+#define _EditColorFlash2_ 45
 #define FIRST_COLOR_MENU_ITEM _EditColorLow_ //Constraint the color menu.
 #define LAST_COLOR_MENU_ITEM _EditColorFlash2_ //Constraint the color menu.
 
@@ -142,6 +146,10 @@ class HomeMenuItem : public MenuItem {
       MenuItem::enter(_QuickBrightness_);
       break;
     
+    case Left:
+      MenuItem::enter(_ProfileSwitcher_);
+      break;
+    
     case Right:
       MenuItem::enter(_MainMenu_);
       animator->showBlockingRunlight(CRGB::Green);
@@ -195,6 +203,64 @@ class QuickBrightnessMenuItem : public MenuItem {
   
 };
 
+/* ==  ProfileSwitcher == */
+class ProfileSwitcherMenuItem : public MenuItem {
+  
+  uint8_t profileIndex;
+  uint8_t displaySegments[4];
+  uint8_t displaySegmentsPrefix[2] = {
+    SEGMENT_P,
+    SEGMENT_r
+  };
+  
+  void onEnter(){
+    profileIndex = CONFIG->getCurrentProfileIndex();
+    displaySegments[0] = displaySegmentsPrefix[0];
+    displaySegments[1] = displaySegmentsPrefix[1];
+    displaySegments[2] = SEGMENT_BLANK;
+    displaySegments[3] = display->encodeDigit(profileIndex+1);
+    display->setSegments(displaySegments);
+    animator->show();
+  }
+  
+  void onButtonEvent(buttonSetEvent_t event){ switch (event) {
+    
+    case Up:
+      profileIndex--;
+      //Overflowed past 0, ignore it.
+      if(profileIndex == 255)
+        profileIndex = 0;
+      else{
+        displaySegments[2] = SEGMENT_BLANK;
+        displaySegments[3] = display->encodeDigit(profileIndex+1);
+        display->setSegments(displaySegments);
+      }
+      break;
+    
+    case Down:
+      profileIndex++;
+      //Went past profile count, ignore it.
+      if(profileIndex >= CONFIG->getProfileCount())
+        profileIndex = CONFIG->getProfileCount()-1;
+      else{
+        displaySegments[2] = SEGMENT_BLANK;
+        displaySegments[3] = display->encodeDigit(profileIndex+1);
+        display->setSegments(displaySegments);
+      }
+      break;
+    
+    case Right:
+    case Left:
+      CONFIG->setCurrentProfile(profileIndex);
+      animator->updateColors();
+      MenuItem::enter(_Home_);
+      CONFIG->save();
+      break;
+    
+  }}
+  
+};
+
 /* ==  MainMenu == */
 class MainMenuMenuItem : public MenuItem {
   
@@ -217,6 +283,75 @@ class MainMenuMenuItem : public MenuItem {
     case Left:
       MenuItem::enter(_Home_);
       CONFIG->save();
+      break;
+    
+  }}
+  
+};
+
+/* ==  ProfileListing == */
+class ProfileListingMenuItem : public MenuItem {
+  
+  uint8_t profileIndex;
+  uint8_t displaySegments[4];
+  uint8_t displaySegmentsPrefix[2] = {
+    SEGMENT_P,
+    SEGMENT_r
+  };
+  
+  void onEnter(){
+    //If we came from the menu item below us, behave differently.
+    bool reverse = prevMenuItemIndex == _ProfileListing_+1;
+    profileIndex = reverse ? CONFIG->getProfileCount() : 0;
+    displaySegments[0] = displaySegmentsPrefix[0];
+    displaySegments[1] = displaySegmentsPrefix[1];
+    displaySegments[2] = reverse ? SEGMENT_DASH : SEGMENT_BLANK;
+    displaySegments[3] = reverse ? SEGMENT_DASH : display->encodeDigit(profileIndex+1);
+    display->setSegments(displaySegments);
+  }
+  
+  void onButtonEvent(buttonSetEvent_t event){ switch (event) {
+    
+    case Up:
+      profileIndex--;
+      if(profileIndex == 255) //Overflowed past 0
+        MenuItem::mainMenuPrev(_ProfileListing_);
+      else{
+        displaySegments[2] = SEGMENT_BLANK;
+        displaySegments[3] = display->encodeDigit(profileIndex+1);
+        display->setSegments(displaySegments);
+      }
+      break;
+    
+    case Down:
+      profileIndex++;
+      if(profileIndex > CONFIG->getProfileCount())
+        MenuItem::mainMenuNext(_ProfileListing_);
+      else if(profileIndex == CONFIG->getProfileCount()){
+        displaySegments[2] = SEGMENT_DASH;
+        displaySegments[3] = SEGMENT_DASH;
+        display->setSegments(displaySegments);
+      }
+      else{
+        displaySegments[2] = SEGMENT_BLANK;
+        displaySegments[3] = display->encodeDigit(profileIndex+1);
+        display->setSegments(displaySegments);
+      }
+      break;
+    
+    case Right:
+      if(profileIndex == CONFIG->getProfileCount()){
+        PROFILE = CONFIG->newProfile();
+        MenuItem::enter(FIRST_PROFILE_MENU_ITEM);
+      }
+      else{
+        PROFILE = &(CONFIG->Profiles[profileIndex]);
+        MenuItem::enter(FIRST_PROFILE_MENU_ITEM);
+      }
+      break;
+    
+    case Left:
+      MenuItem::enter(_Home_);
       break;
     
   }}
@@ -436,7 +571,7 @@ class EditStationaryRPMMenuItem : public RPMEditingMenuItem {
   };
   
   void onLeave(){
-    if(didEdit) CONFIG->RPMStationary = constrain(CONFIG->RPMStationary, MIN_RPM_SETTING, CONFIG->CurrentProfile->RPMActivation);
+    if(didEdit) CONFIG->RPMStationary = constrain(CONFIG->RPMStationary, MIN_RPM_SETTING, PROFILE->RPMActivation);
   }
   
   void onUpdate(){
@@ -448,7 +583,7 @@ class EditStationaryRPMMenuItem : public RPMEditingMenuItem {
   }
   
   void onValueChange(int difference){
-    CONFIG->RPMStationary = constrain(CONFIG->RPMStationary+difference, MIN_RPM_SETTING, CONFIG->CurrentProfile->RPMActivation);
+    CONFIG->RPMStationary = constrain(CONFIG->RPMStationary+difference, MIN_RPM_SETTING, PROFILE->RPMActivation);
   }
   
   void onButtonEvent(buttonSetEvent_t event){
@@ -467,8 +602,8 @@ class EditStationaryRPMMenuItem : public RPMEditingMenuItem {
   
 };
 
-/* ==  EditLowRPM == */
-class EditLowRPMMenuItem : public RPMEditingMenuItem {
+/* ==  EditProfileLowRPM == */
+class EditProfileLowRPMMenuItem : public RPMEditingMenuItem {
   
   uint8_t displaySegments[4] = {
     SEGMENT_BLANK,
@@ -485,13 +620,13 @@ class EditLowRPMMenuItem : public RPMEditingMenuItem {
   };
   
   void onLeave(){
-    if(didEdit) CONFIG->CurrentProfile->RPMLow = constrain(CONFIG->CurrentProfile->RPMLow, 0, CONFIG->CurrentProfile->RPMActivation);
+    if(didEdit) PROFILE->RPMLow = constrain(PROFILE->RPMLow, 0, PROFILE->RPMActivation);
   }
   
   void onUpdate(){
     if(editing){
-      if(CONFIG->CurrentProfile->RPMLow > 0){
-        display->showNumberDec(CONFIG->CurrentProfile->RPMLow);
+      if(PROFILE->RPMLow > 0){
+        display->showNumberDec(PROFILE->RPMLow);
       } else {
         display->setSegments(offSegments);
       }
@@ -502,15 +637,15 @@ class EditLowRPMMenuItem : public RPMEditingMenuItem {
   
   void onValueChange(int difference){
     //Low is special, since 0 == OFF, increases should start from stationary.
-    if(CONFIG->CurrentProfile->RPMLow == 0){
-      CONFIG->CurrentProfile->RPMLow = CONFIG->RPMStationary;
+    if(PROFILE->RPMLow == 0){
+      PROFILE->RPMLow = CONFIG->RPMStationary;
     }
     
-    CONFIG->CurrentProfile->RPMLow = constrain(CONFIG->CurrentProfile->RPMLow+difference, CONFIG->RPMStationary, CONFIG->CurrentProfile->RPMActivation);
+    PROFILE->RPMLow = constrain(PROFILE->RPMLow+difference, CONFIG->RPMStationary, PROFILE->RPMActivation);
     
     //When we're back to stationary, that means we decreased into OFF.
-    if(CONFIG->CurrentProfile->RPMLow == CONFIG->RPMStationary){
-      CONFIG->CurrentProfile->RPMLow = 0;
+    if(PROFILE->RPMLow == CONFIG->RPMStationary){
+      PROFILE->RPMLow = 0;
     }
   }
   
@@ -518,8 +653,8 @@ class EditLowRPMMenuItem : public RPMEditingMenuItem {
     RPMEditingMenuItem::onButtonEvent(event);
     switch (event) {
     
-    case Up: if(!editing) MenuItem::mainMenuPrev(_EditLowRPM_); break;
-    case Down: if(!editing) MenuItem::mainMenuNext(_EditLowRPM_); break;
+    case Up: if(!editing) MenuItem::profileMenuPrev(_EditProfileLowRPM_); break;
+    case Down: if(!editing) MenuItem::profileMenuNext(_EditProfileLowRPM_); break;
     
     case Left:
       MenuItem::enter(_Home_);
@@ -530,8 +665,8 @@ class EditLowRPMMenuItem : public RPMEditingMenuItem {
   
 };
 
-/* ==  EditActivationRPM == */
-class EditActivationRPMMenuItem : public RPMEditingMenuItem {
+/* ==  EditProfileActivationRPM == */
+class EditProfileActivationRPMMenuItem : public RPMEditingMenuItem {
   
   uint8_t displaySegments[4] = {
     SEGMENT_A,
@@ -541,27 +676,27 @@ class EditActivationRPMMenuItem : public RPMEditingMenuItem {
   };
   
   void onLeave(){
-    if(didEdit) CONFIG->CurrentProfile->RPMShift = max(CONFIG->CurrentProfile->RPMActivation, CONFIG->CurrentProfile->RPMShift);
+    if(didEdit) PROFILE->RPMShift = max(PROFILE->RPMActivation, PROFILE->RPMShift);
   }
   
   void onUpdate(){
     if(editing){
-      display->showNumberDec(CONFIG->CurrentProfile->RPMActivation);
+      display->showNumberDec(PROFILE->RPMActivation);
     } else {
       display->setSegments(displaySegments);
     }
   }
   
   void onValueChange(int difference){
-    CONFIG->CurrentProfile->RPMActivation = constrain(CONFIG->CurrentProfile->RPMActivation+difference, MIN_RPM_SETTING, CONFIG->CurrentProfile->RPMShift);
+    PROFILE->RPMActivation = constrain(PROFILE->RPMActivation+difference, MIN_RPM_SETTING, PROFILE->RPMShift);
   }
   
   void onButtonEvent(buttonSetEvent_t event){
     RPMEditingMenuItem::onButtonEvent(event);
     switch (event) {
     
-    case Up: if(!editing) MenuItem::mainMenuPrev(_EditActivationRPM_); break;
-    case Down: if(!editing) MenuItem::mainMenuNext(_EditActivationRPM_); break;
+    case Up: if(!editing) MenuItem::profileMenuPrev(_EditProfileActivationRPM_); break;
+    case Down: if(!editing) MenuItem::profileMenuNext(_EditProfileActivationRPM_); break;
     
     case Left:
       MenuItem::enter(_Home_);
@@ -572,8 +707,8 @@ class EditActivationRPMMenuItem : public RPMEditingMenuItem {
   
 };
 
-/* ==  EditShiftRPM == */
-class EditShiftRPMMenuItem : public RPMEditingMenuItem {
+/* ==  EditProfileShiftRPM == */
+class EditProfileShiftRPMMenuItem : public RPMEditingMenuItem {
   
   uint8_t displaySegments[4] = {
     SEGMENT_S,
@@ -583,27 +718,27 @@ class EditShiftRPMMenuItem : public RPMEditingMenuItem {
   };
   
   void onLeave(){
-    if(didEdit) CONFIG->CurrentProfile->RPMShift = constrain(CONFIG->CurrentProfile->RPMShift, CONFIG->CurrentProfile->RPMActivation, MAX_RPM_SETTING);
+    if(didEdit) PROFILE->RPMShift = constrain(PROFILE->RPMShift, PROFILE->RPMActivation, MAX_RPM_SETTING);
   }
   
   void onUpdate(){
     if(editing){
-      display->showNumberDec(CONFIG->CurrentProfile->RPMShift);
+      display->showNumberDec(PROFILE->RPMShift);
     } else {
       display->setSegments(displaySegments);
     }
   }
   
   void onValueChange(int difference){
-    CONFIG->CurrentProfile->RPMShift = constrain(CONFIG->CurrentProfile->RPMShift+difference, CONFIG->CurrentProfile->RPMActivation, MAX_RPM_SETTING);
+    PROFILE->RPMShift = constrain(PROFILE->RPMShift+difference, PROFILE->RPMActivation, MAX_RPM_SETTING);
   }
   
   void onButtonEvent(buttonSetEvent_t event){
     RPMEditingMenuItem::onButtonEvent(event);
     switch (event) {
     
-    case Up: if(!editing) MenuItem::mainMenuPrev(_EditShiftRPM_); break;
-    case Down: if(!editing) MenuItem::mainMenuNext(_EditShiftRPM_); break;
+    case Up: if(!editing) MenuItem::profileMenuPrev(_EditProfileShiftRPM_); break;
+    case Down: if(!editing) MenuItem::profileMenuNext(_EditProfileShiftRPM_); break;
     
     case Left:
       MenuItem::enter(_Home_);
@@ -674,7 +809,7 @@ class EditRPMStepMenuItem : public EditingMenuItem {
 };
 
 /* ==  EditRPMAnimation == */
-class EditRPMAnimationMenuItem : public EditingMenuItem {
+class EditProfileRPMAnimationMenuItem : public EditingMenuItem {
   
   uint8_t displaySegments[4] = {
     SEGMENT_BLANK,
@@ -697,7 +832,7 @@ class EditRPMAnimationMenuItem : public EditingMenuItem {
   
   void onUpdate(){
     if(editing){
-      display->setSegments(animationNames[CONFIG->CurrentProfile->RPMAnimation]);
+      display->setSegments(animationNames[PROFILE->RPMAnimation]);
     } else {
       display->setSegments(displaySegments);
     }
@@ -708,13 +843,13 @@ class EditRPMAnimationMenuItem : public EditingMenuItem {
     switch (event) {
     
     case Up:
-      if(!editing) MenuItem::mainMenuPrev(_EditRPMAnimation_);
-      else CONFIG->CurrentProfile->RPMAnimation = max(CONFIG->CurrentProfile->RPMAnimation-1, 0);
+      if(!editing) MenuItem::profileMenuPrev(_EditProfileRPMAnimation_);
+      else PROFILE->RPMAnimation = max(PROFILE->RPMAnimation-1, 0);
       break;
     
     case Down:
-      if(!editing) MenuItem::mainMenuNext(_EditRPMAnimation_);
-      else CONFIG->CurrentProfile->RPMAnimation = min(CONFIG->CurrentProfile->RPMAnimation+1, 4);
+      if(!editing) MenuItem::profileMenuNext(_EditProfileRPMAnimation_);
+      else PROFILE->RPMAnimation = min(PROFILE->RPMAnimation+1, 4);
       break;
     
     case Left:
@@ -726,8 +861,8 @@ class EditRPMAnimationMenuItem : public EditingMenuItem {
   
 };
 
-/* ==  EditColors == */
-class EditColorsMenuItem : public MenuItem {
+/* ==  EditProfileColors == */
+class EditProfileColorsMenuItem : public MenuItem {
   
   uint8_t displaySegments[4] = {
     SEGMENT_C,
@@ -743,8 +878,8 @@ class EditColorsMenuItem : public MenuItem {
   void onButtonEvent(buttonSetEvent_t event){
     switch (event) {
     
-    case Up: MenuItem::mainMenuPrev(_EditColors_); break;
-    case Down: MenuItem::mainMenuNext(_EditColors_); break;
+    case Up: MenuItem::profileMenuPrev(_EditProfileColors_); break;
+    case Down: MenuItem::profileMenuNext(_EditProfileColors_); break;
     
     case Right:
       MenuItem::enter(_EditColorLow_);
@@ -770,7 +905,7 @@ class EditColorLowMenuItem : public ColorEditingMenuItem {
   };
   
   void onEnter(){
-    colorIndex = CONFIG->CurrentProfile->CLow;
+    colorIndex = PROFILE->CLow;
     allowBlack = false;
     ColorEditingMenuItem::onEnter();
     display->setSegments(displaySegments);
@@ -778,7 +913,7 @@ class EditColorLowMenuItem : public ColorEditingMenuItem {
   
   void onLeave(){
     if(didEdit){
-      CONFIG->CurrentProfile->CLow = colorIndex;
+      PROFILE->CLow = colorIndex;
       animator->updateColors();
     }
   }
@@ -788,7 +923,7 @@ class EditColorLowMenuItem : public ColorEditingMenuItem {
     switch (event) {
     case Up: if(!editing) MenuItem::colorMenuPrev(_EditColorLow_); break;
     case Down: if(!editing) MenuItem::colorMenuNext(_EditColorLow_); break;
-    case Left: MenuItem::enter(_EditColors_); break;
+    case Left: MenuItem::enter(_EditProfileColors_); break;
   }}
   
 };
@@ -804,7 +939,7 @@ class EditColorPart1MenuItem : public ColorEditingMenuItem {
   };
   
   void onEnter(){
-    colorIndex = CONFIG->CurrentProfile->CPart1;
+    colorIndex = PROFILE->CPart1;
     allowBlack = false;
     ColorEditingMenuItem::onEnter();
     display->setSegments(displaySegments);
@@ -812,7 +947,7 @@ class EditColorPart1MenuItem : public ColorEditingMenuItem {
   
   void onLeave(){
     if(didEdit){
-      CONFIG->CurrentProfile->CPart1 = colorIndex;
+      PROFILE->CPart1 = colorIndex;
       animator->updateColors();
     }
   }
@@ -822,7 +957,7 @@ class EditColorPart1MenuItem : public ColorEditingMenuItem {
     switch (event) {
     case Up: if(!editing) MenuItem::colorMenuPrev(_EditColorPart1_); break;
     case Down: if(!editing) MenuItem::colorMenuNext(_EditColorPart1_); break;
-    case Left: MenuItem::enter(_EditColors_); break;
+    case Left: MenuItem::enter(_EditProfileColors_); break;
   }}
   
 };
@@ -838,7 +973,7 @@ class EditColorPart2MenuItem : public ColorEditingMenuItem {
   };
   
   void onEnter(){
-    colorIndex = CONFIG->CurrentProfile->CPart2;
+    colorIndex = PROFILE->CPart2;
     allowBlack = false;
     ColorEditingMenuItem::onEnter();
     display->setSegments(displaySegments);
@@ -846,7 +981,7 @@ class EditColorPart2MenuItem : public ColorEditingMenuItem {
   
   void onLeave(){
     if(didEdit){
-      CONFIG->CurrentProfile->CPart2 = colorIndex;
+      PROFILE->CPart2 = colorIndex;
       animator->updateColors();
     }
   }
@@ -856,7 +991,7 @@ class EditColorPart2MenuItem : public ColorEditingMenuItem {
     switch (event) {
     case Up: if(!editing) MenuItem::colorMenuPrev(_EditColorPart2_); break;
     case Down: if(!editing) MenuItem::colorMenuNext(_EditColorPart2_); break;
-    case Left: MenuItem::enter(_EditColors_); break;
+    case Left: MenuItem::enter(_EditProfileColors_); break;
   }}
   
 };
@@ -872,7 +1007,7 @@ class EditColorPart3MenuItem : public ColorEditingMenuItem {
   };
   
   void onEnter(){
-    colorIndex = CONFIG->CurrentProfile->CPart3;
+    colorIndex = PROFILE->CPart3;
     allowBlack = false;
     ColorEditingMenuItem::onEnter();
     display->setSegments(displaySegments);
@@ -880,7 +1015,7 @@ class EditColorPart3MenuItem : public ColorEditingMenuItem {
   
   void onLeave(){
     if(didEdit){
-      CONFIG->CurrentProfile->CPart3 = colorIndex;
+      PROFILE->CPart3 = colorIndex;
       animator->updateColors();
     }
   }
@@ -890,7 +1025,7 @@ class EditColorPart3MenuItem : public ColorEditingMenuItem {
     switch (event) {
     case Up: if(!editing) MenuItem::colorMenuPrev(_EditColorPart3_); break;
     case Down: if(!editing) MenuItem::colorMenuNext(_EditColorPart3_); break;
-    case Left: MenuItem::enter(_EditColors_); break;
+    case Left: MenuItem::enter(_EditProfileColors_); break;
   }}
   
 };
@@ -906,7 +1041,7 @@ class EditColorFlash1MenuItem : public ColorEditingMenuItem {
   };
   
   void onEnter(){
-    colorIndex = CONFIG->CurrentProfile->CFlash1;
+    colorIndex = PROFILE->CFlash1;
     allowBlack = false;
     ColorEditingMenuItem::onEnter();
     display->setSegments(displaySegments);
@@ -914,7 +1049,7 @@ class EditColorFlash1MenuItem : public ColorEditingMenuItem {
   
   void onLeave(){
     if(didEdit){
-      CONFIG->CurrentProfile->CFlash1 = colorIndex;
+      PROFILE->CFlash1 = colorIndex;
       animator->updateColors();
     }
   }
@@ -924,7 +1059,7 @@ class EditColorFlash1MenuItem : public ColorEditingMenuItem {
     switch (event) {
     case Up: if(!editing) MenuItem::colorMenuPrev(_EditColorFlash1_); break;
     case Down: if(!editing) MenuItem::colorMenuNext(_EditColorFlash1_); break;
-    case Left: MenuItem::enter(_EditColors_); break;
+    case Left: MenuItem::enter(_EditProfileColors_); break;
   }}
   
 };
@@ -940,7 +1075,7 @@ class EditColorFlash2MenuItem : public ColorEditingMenuItem {
   };
   
   void onEnter(){
-    colorIndex = CONFIG->CurrentProfile->CFlash2;
+    colorIndex = PROFILE->CFlash2;
     allowBlack = true;
     ColorEditingMenuItem::onEnter();
     display->setSegments(displaySegments);
@@ -948,7 +1083,7 @@ class EditColorFlash2MenuItem : public ColorEditingMenuItem {
   
   void onLeave(){
     if(didEdit){
-      CONFIG->CurrentProfile->CFlash2 = colorIndex;
+      PROFILE->CFlash2 = colorIndex;
       animator->updateColors();
     }
   }
@@ -958,7 +1093,7 @@ class EditColorFlash2MenuItem : public ColorEditingMenuItem {
     switch (event) {
     case Up: if(!editing) MenuItem::colorMenuPrev(_EditColorFlash2_); break;
     case Down: if(!editing) MenuItem::colorMenuNext(_EditColorFlash2_); break;
-    case Left: MenuItem::enter(_EditColors_); break;
+    case Left: MenuItem::enter(_EditProfileColors_); break;
   }}
   
 };
