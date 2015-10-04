@@ -15,6 +15,10 @@ PixelAnimator::PixelAnimator(Config* config){
 }
 
 void PixelAnimator::setup(){
+  passedLow = false;
+  CSegmentsFull = new CRGB*[NUMPIXELS];
+  int halfMax = ceil(NUMPIXELS/2.0);
+  CSegmentsHalved = new CRGB*[halfMax];
   FastLED.addLeds<PIXELTYPE, PIXELPIN, GRB>(pixels, NUMPIXELS);
   setBrightness(CONFIG->PixelBrightness);
   updateColors();
@@ -31,6 +35,23 @@ void PixelAnimator::updateColors(){
   CPart3 = ColorPicker::at(CONFIG->CurrentProfile->CPart3);
   CFlash1 = ColorPicker::at(CONFIG->CurrentProfile->CFlash1);
   CFlash2 = ColorPicker::at(CONFIG->CurrentProfile->CFlash2, true);
+  int i = 0;
+  for (; i < DEFAULT_SEG1 && i < NUMPIXELS; ++i) CSegmentsFull[i] = &CPart1;
+  for (; i < DEFAULT_SEG1+DEFAULT_SEG2 && i < NUMPIXELS; ++i) CSegmentsFull[i] = &CPart2;
+  for (; i < NUMPIXELS; ++i) CSegmentsFull[i] = &CPart3;
+  i = 0;
+  int halfMax = ceil(NUMPIXELS/2.0);
+  float halvingFactor = halfMax/(float)NUMPIXELS;
+  int halfSeg1 = DEFAULT_SEG1*halvingFactor;
+  int halfSeg2 = DEFAULT_SEG2*halvingFactor;
+  //We want to show all segments at at least 1 pixel size.
+  if(halfSeg1+halfSeg2 == halfMax){
+    if(halfSeg2 > 1) halfSeg2--;
+    else halfSeg1--;
+  }
+  for (; i < halfSeg1 && i < halfMax; ++i) CSegmentsHalved[i] = &CPart1;
+  for (; i < halfSeg1+halfSeg2 && i < halfMax; ++i) CSegmentsHalved[i] = &CPart2;
+  for (; i < halfMax; ++i) CSegmentsHalved[i] = &CPart3;
 }
 
 void PixelAnimator::show(){
@@ -42,10 +63,17 @@ void PixelAnimator::setRPM(uint16_t rpm){
   int litPixels, blackPixels, midPoint;
   bool shift = false, blank = false, low = false;
   
-  if(rpm >= CONFIG->CurrentProfile->RPMShift){ shift = true; }
-  else if(rpm <= CONFIG->CurrentProfile->RPMLow && rpm > CONFIG->RPMStationary){ low = true; }
-  else if(rpm <= CONFIG->CurrentProfile->RPMActivation){ blank = true; }
+  if(rpm >= CONFIG->CurrentProfile->RPMShift){ shift = true; passedLow = true; }
+  else if(passedLow && rpm <= CONFIG->CurrentProfile->RPMLow && rpm > CONFIG->RPMStationary){ low = true; }
+  else if(rpm <= CONFIG->CurrentProfile->RPMActivation){
+    blank = true;
+    if(rpm < CONFIG->RPMStationary)
+      passedLow = false;
+    else if (rpm > CONFIG->CurrentProfile->RPMLow)
+      passedLow = true;
+  }
   else{
+    passedLow = true;
     float fillRange, fillOffset;
     fillOffset = rpm - CONFIG->CurrentProfile->RPMActivation;
     fillRange = CONFIG->CurrentProfile->RPMShift - CONFIG->CurrentProfile->RPMActivation;
@@ -66,7 +94,7 @@ void PixelAnimator::setRPM(uint16_t rpm){
   
   // When we show nothing.
   else if(blank){
-    for(int i=0; i<NUMPIXELS; i++) pixels[i] = CRGB::Black;
+    setFill(CRGB::Black);
   }
   
   // When not shifting yet.
@@ -150,26 +178,8 @@ void PixelAnimator::showBlockingRunlight(CRGB color, uint16_t time){
 
 CRGB PixelAnimator::colorFor(uint8_t index, bool halved){
   if(halved){
-    
-    if(index < (NUMPIXELS/4))
-      return CPart1;
-    
-    else if(index <= (NUMPIXELS*3/8))
-      return CPart2;
-    
-    else
-      return CPart3;
-    
+    return *CSegmentsHalved[index];
   } else {
-    
-    if(index <= (NUMPIXELS/2))
-      return CPart1;
-    
-    else if(index <= (NUMPIXELS*3/4))
-      return CPart2;
-    
-    else
-      return CPart3;
-    
+    return *CSegmentsFull[index];
   }
 }

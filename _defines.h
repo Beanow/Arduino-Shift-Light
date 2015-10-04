@@ -63,3 +63,6 @@
 #define DEFAULT_CPART3 0 // red.
 #define DEFAULT_CFLASH1 0 // red.
 #define DEFAULT_CFLASH2 17 // black.
+
+#define DEFAULT_SEG1 9
+#define DEFAULT_SEG2 5

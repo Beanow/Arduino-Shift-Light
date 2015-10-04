@@ -37,12 +37,15 @@ class PixelAnimator {
   private:
     Config* CONFIG;
     uint8_t targetBrightness;
+    bool passedLow;
     CRGB CLow;
     CRGB CPart1;
     CRGB CPart2;
     CRGB CPart3;
     CRGB CFlash1;
     CRGB CFlash2;
+    CRGB** CSegmentsFull;
+    CRGB** CSegmentsHalved;
     CRGB colorFor(uint8_t index, bool halved=false);
   
 };
