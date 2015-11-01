@@ -16,13 +16,14 @@
 #define _MainMenu_ 10 //This is always the first main menu item.
 #define _ProfileListing_ 11
 #define _EditLCDBrightness_ 12
-#define _EditTime_ 13
-#define _EditRPMStep_ 14
-#define _EditStationaryRPM_ 15
-#define _EditPPR_ 16
-#define _EditRPMBuffer_ 17
-#define _EditRPMMeasureMode_ 18
-#define _Reset_ 19
+#define _EditColorSegments_ 13
+#define _EditTime_ 14
+#define _EditRPMStep_ 15
+#define _EditStationaryRPM_ 16
+#define _EditPPR_ 17
+#define _EditRPMBuffer_ 18
+#define _EditRPMMeasureMode_ 19
+#define _Reset_ 20
 #define LAST_MAIN_MENU_ITEM _Reset_ //Constraint the main menu.
 
 #define _EditProfileLowRPM_ 31
@@ -1415,6 +1416,153 @@ class EditTimeMenuItem : public MenuItem {
         desiredOutput[1] = displaySegments[1];
         desiredOutput[2] = displaySegments[2];
         desiredOutput[3] = displaySegments[3];
+        animator->showBlockingRunlight(CRGB::Green);
+        break;
+    }
+    
+  }
+  
+};
+
+/* ==  EditColorSegments == */
+class EditColorSegmentsMenuItem : public MenuItem {
+  
+  enum editWhat : uint8_t
+  {
+    NOTHING = 0,
+    FULL_SEGMENT1 = 1,
+    FULL_SEGMENT2 = 2,
+    HALF_SEGMENT1 = 3,
+    HALF_SEGMENT2 = 4,
+    SET = 5
+  };
+  
+  uint8_t displaySegments[4] = {
+    SEGMENT_C,
+    SEGMENT_S,
+    SEGMENT_e,
+    SEGMENT_g
+  };
+  
+  uint16_t editValue;
+  uint8_t editState;
+  uint8_t prevState;
+  uint8_t segments[4];
+  
+  void onEnter(){
+    segments[0] = CONFIG->FullSegment1;
+    segments[1] = CONFIG->FullSegment2;
+    segments[2] = CONFIG->HalfSegment1;
+    segments[3] = CONFIG->HalfSegment2;
+    editState = (uint8_t)NOTHING;
+    prevState = (uint8_t)NOTHING;
+    editValue = 0;
+    display->setSegments(displaySegments);
+  }
+  
+  void onUpdate(){
+    bool blink = millis()/ANIM_TURBO%8<3;
+    switch(editState){
+      case FULL_SEGMENT1:
+        animator->showSegmentPreview(segments[0],segments[1],(blink?1:0),false);
+        break;
+      case FULL_SEGMENT2:
+        animator->showSegmentPreview(segments[0],segments[1],(blink?2:0),false);
+        break;
+      case HALF_SEGMENT1:
+        animator->showSegmentPreview(segments[2],segments[3],(blink?1:0),true);
+        break;
+      case HALF_SEGMENT2:
+        animator->showSegmentPreview(segments[2],segments[3],(blink?2:0),true);
+        break;
+    }
+  }
+  
+  void onButtonEvent(buttonSetEvent_t event){
+    
+    // Before moving state.
+    switch(editState){
+      
+      // When we've done nothing yet.
+      case NOTHING:
+        switch (event) {
+          case Up: MenuItem::mainMenuPrev(_EditColorSegments_); break;
+          case Down: MenuItem::mainMenuNext(_EditColorSegments_); break;
+          case Right: editState++; break;
+          case Left:
+            MenuItem::enter(_Home_);
+            break;
+        }
+        break;
+      
+      // Just adjust by 1. And support moving state.
+      default:
+        switch(event){
+          case Up: editValue++; break;
+          case Down: editValue--; break;
+          case Right: editState++; break;
+          case Left: editState--; break;
+        }
+        break;
+      
+    }
+    
+    int halfMax = ceil(NUMPIXELS/2.0);
+    
+    // After moving state.
+    switch(editState){
+      case NOTHING:
+        animator->setFill(CRGB::Black);
+        animator->show();
+        break;
+      case FULL_SEGMENT1:
+        if(prevState != editState){
+          editValue = segments[0];
+          prevState = editState;
+        }else{
+          editValue = constrain(editValue, 1, NUMPIXELS-2);
+          segments[0] = editValue;
+          segments[1] = constrain(segments[1], 1, NUMPIXELS-editValue-1);
+        }
+        break;
+      case FULL_SEGMENT2:
+        if(prevState != editState){
+          editValue = segments[1];
+          prevState = editState;
+        }else{
+          editValue = constrain(editValue, 1, NUMPIXELS-segments[0]-1);
+          segments[1] = editValue;
+        }
+        break;
+      case HALF_SEGMENT1:
+        if(prevState != editState){
+          editValue = segments[2];
+          prevState = editState;
+        }else{
+          editValue = constrain(editValue, 1, halfMax-2);
+          segments[2] = editValue;
+          segments[3] = constrain(segments[3], 1, halfMax-editValue-1);
+        }
+        break;
+      case HALF_SEGMENT2:
+        if(prevState != editState){
+          editValue = segments[3];
+          prevState = editState;
+        }else{
+          editValue = constrain(editValue, 1, halfMax-segments[2]-1);
+          segments[3] = editValue;
+        }
+        break;
+      
+      // We are apparently done, save our things and return to the NOTHING state.
+      case SET:
+        CONFIG->FullSegment1 = segments[0];
+        CONFIG->FullSegment2 = segments[1];
+        CONFIG->HalfSegment1 = segments[2];
+        CONFIG->HalfSegment2 = segments[3];
+        CONFIG->save();
+        animator->updateColors();
+        editState=0;
         animator->showBlockingRunlight(CRGB::Green);
         break;
     }

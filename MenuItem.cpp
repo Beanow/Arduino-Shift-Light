@@ -14,6 +14,7 @@ static MenuItem* getMenuItem(uint8_t itemIndex){switch(itemIndex){
   case _EditStationaryRPM_: return new EditStationaryRPMMenuItem();
   case _EditRPMStep_: return new EditRPMStepMenuItem();
   case _EditTime_: return new EditTimeMenuItem();
+  case _EditColorSegments_: return new EditColorSegmentsMenuItem();
   case _EditLCDBrightness_: return new EditLCDBrightnessMenuItem();
   case _EditProfileLowRPM_: return new EditProfileLowRPMMenuItem();
   case _EditProfileActivationRPM_: return new EditProfileActivationRPMMenuItem();

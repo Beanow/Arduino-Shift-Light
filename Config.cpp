@@ -9,6 +9,10 @@ void Config::applyBulk(bool read){
   i += read ? READ(i, PPR) : WRITE(i, PPR);
   i += read ? READ(i, RPMStep) : WRITE(i, RPMStep);
   i += read ? READ(i, RPMBuffer) : WRITE(i, RPMBuffer);
+  i += read ? READ(i, FullSegment1) : WRITE(i, FullSegment1);
+  i += read ? READ(i, FullSegment2) : WRITE(i, FullSegment2);
+  i += read ? READ(i, HalfSegment1) : WRITE(i, HalfSegment1);
+  i += read ? READ(i, HalfSegment2) : WRITE(i, HalfSegment2);
   i += read ? READ(i, RPMMeasureMode) : WRITE(i, RPMMeasureMode);
   i += read ? READ(i, PixelBrightness) : WRITE(i, PixelBrightness);
   i += read ? READ(i, DisplayBrightness) : WRITE(i, DisplayBrightness);
@@ -47,6 +51,10 @@ void Config::load(){
   if(magicByte != EEPROM_MAGIC_BYTE){
     PPR = DEFAULT_PPR;
     RPMStep = DEFAULT_RPM_STEP;
+    FullSegment1 = DEFAULT_FSEG1;
+    FullSegment2 = DEFAULT_FSEG2;
+    HalfSegment1 = DEFAULT_HSEG1;
+    HalfSegment2 = DEFAULT_HSEG2;
     RPMBuffer = DEFAULT_RPM_BUFFER;
     RPMMeasureMode = DEFAULT_RPM_MEASUREMODE;
     PixelBrightness = DEFAULT_PIXEL_BRIGHTNESS;
@@ -116,7 +124,6 @@ void Config::deleteProfile(Profile* profile){
   //Shrink the array.
   Profile* oldProfiles = Profiles;
   Profiles = new Profile[--profileCount];
-  
   
   //Copy everything except for the targeted one.
   int isource = 0;

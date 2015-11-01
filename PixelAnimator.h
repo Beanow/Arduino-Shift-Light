@@ -32,7 +32,8 @@ class PixelAnimator {
       setFill(CRGB color),
       setEdges(CRGB color),
       setRPM(uint16_t rpm),
-      showBlockingRunlight(CRGB color, uint16_t time=ANIM_MED);
+      showBlockingRunlight(CRGB color, uint16_t time=ANIM_MED),
+      showSegmentPreview(uint8_t segment1, uint8_t segment2, uint8_t blackSegment=0, bool halved=false);
   
   private:
     Config* CONFIG;

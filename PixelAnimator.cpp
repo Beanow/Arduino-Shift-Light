@@ -36,22 +36,32 @@ void PixelAnimator::updateColors(){
   CFlash1 = ColorPicker::at(CONFIG->CurrentProfile->CFlash1);
   CFlash2 = ColorPicker::at(CONFIG->CurrentProfile->CFlash2, true);
   int i = 0;
-  for (; i < DEFAULT_SEG1 && i < NUMPIXELS; ++i) CSegmentsFull[i] = &CPart1;
-  for (; i < DEFAULT_SEG1+DEFAULT_SEG2 && i < NUMPIXELS; ++i) CSegmentsFull[i] = &CPart2;
+  for (; i < CONFIG->FullSegment1 && i < NUMPIXELS; ++i) CSegmentsFull[i] = &CPart1;
+  for (; i < CONFIG->FullSegment1+CONFIG->FullSegment2 && i < NUMPIXELS; ++i) CSegmentsFull[i] = &CPart2;
   for (; i < NUMPIXELS; ++i) CSegmentsFull[i] = &CPart3;
   i = 0;
   int halfMax = ceil(NUMPIXELS/2.0);
-  float halvingFactor = halfMax/(float)NUMPIXELS;
-  int halfSeg1 = DEFAULT_SEG1*halvingFactor;
-  int halfSeg2 = DEFAULT_SEG2*halvingFactor;
-  //We want to show all segments at at least 1 pixel size.
-  if(halfSeg1+halfSeg2 == halfMax){
-    if(halfSeg2 > 1) halfSeg2--;
-    else halfSeg1--;
-  }
-  for (; i < halfSeg1 && i < halfMax; ++i) CSegmentsHalved[i] = &CPart1;
-  for (; i < halfSeg1+halfSeg2 && i < halfMax; ++i) CSegmentsHalved[i] = &CPart2;
+  for (; i < CONFIG->HalfSegment1 && i < halfMax; ++i) CSegmentsHalved[i] = &CPart1;
+  for (; i < CONFIG->HalfSegment1+CONFIG->HalfSegment2 && i < halfMax; ++i) CSegmentsHalved[i] = &CPart2;
   for (; i < halfMax; ++i) CSegmentsHalved[i] = &CPart3;
+}
+
+void PixelAnimator::showSegmentPreview(uint8_t segment1, uint8_t segment2, uint8_t blackSegment, bool halved){
+  int i = 0;
+  CRGB part1 = blackSegment == 1 ? CRGB::Black : CPart1;
+  CRGB part2 = blackSegment == 2 ? CRGB::Black : CPart2;
+  CRGB part3 = blackSegment == 3 ? CRGB::Black : CPart3;
+  if(!halved){
+    for (; i < segment1 && i < NUMPIXELS; ++i) pixels[i] = part1;
+    for (; i < segment1+segment2 && i < NUMPIXELS; ++i) pixels[i] = part2;
+    for (; i < NUMPIXELS; ++i) pixels[i] = part3;
+  } else {
+    int midPoint = ceil(NUMPIXELS/2.0);
+    for (; i < segment1 && i < midPoint; ++i){ pixels[midPoint-1-i] = part1; pixels[midPoint+i] = part1; }
+    for (; i < segment1+segment2 && i < midPoint; ++i) { pixels[midPoint-1-i] = part2; pixels[midPoint+i] = part2; }
+    for (; i < midPoint; ++i) { pixels[midPoint-1-i] = part3; pixels[midPoint+i] = part3; }
+  }
+  show();
 }
 
 void PixelAnimator::show(){

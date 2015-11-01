@@ -6,7 +6,7 @@
 #include "_defines.h"
 #include "Profile.h"
 
-#define EEPROM_MAGIC_BYTE 0x56
+#define EEPROM_MAGIC_BYTE 0x55
 
 class Config {
   
@@ -26,6 +26,10 @@ class Config {
     uint8_t
       PPR,
       RPMStep,
+      FullSegment1,
+      FullSegment2,
+      HalfSegment1,
+      HalfSegment2,
       PixelBrightness,
       DisplayBrightness;
     
