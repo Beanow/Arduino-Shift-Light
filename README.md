@@ -66,4 +66,4 @@ Displayed | Means | Range | Description
 
 ![Schematic](docs/Schematic.png)
 
-_Created with [KiCad](http://kicad-pcb.org/), originals in `docs` folder._
+_Created with [KiCad](http://kicad.org/), originals in `docs` folder._
